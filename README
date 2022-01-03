@@ -1,0 +1,20 @@
+For typeScript add :--- 
+
+
+-> tsconfig.json file , 
+-> npm install typescript 
+-> npm install @types/react-native
+-> npm install @types/react-test-renderer
+-> Add in Package.json   in 'jest' :-- 
+   "jest": {
+    "preset": "react-native",
+      "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ]
+  },
+-> Add .tsx   extention in alll files.
