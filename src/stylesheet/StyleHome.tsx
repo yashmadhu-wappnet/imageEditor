@@ -12,16 +12,20 @@ const StyleHome = StyleSheet.create({
     backgroundColor: 'white',
   },
   subContainer: {
-    borderRadius: 5,
-    alignItems: 'center',
-    marginVertical: hp('1%'),
-    // width: wp('90%'),
-    padding: wp('2%'),
     flexDirection: 'row',
-    borderWidth: wp('0.2%'),
-    borderColor: '#929292',
+    justifyContent: 'space-between',
   },
-
+  emptyListImageStyle: {
+    height: wp('40%'),
+    width: wp('40%'),
+    marginVertical: hp('1%'),
+    // alignSelf: 'center',
+  },
+  emptyListTextStyle: {
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
   projectListContainer: {
     marginVertical: hp('4%'),
     justifyContent: 'center',
@@ -35,6 +39,7 @@ const StyleHome = StyleSheet.create({
   projectListSubContainer: {
     borderWidth: wp('0.2%'),
     // backgroundColor: 'aqua',
+    // flexDirection: 'row',
     width: wp('90%'),
     borderColor: '#929292',
     marginVertical: hp('1%'),
@@ -46,6 +51,11 @@ const StyleHome = StyleSheet.create({
     flex: 1,
     marginHorizontal: wp('2%'),
     // backgroundColor: 'aqua',
+  },
+
+  nextIconStyle: {
+    width: wp('5%'),
+    height: wp('5%'),
   },
   folderIconStyle: {
     width: wp('8%'),
@@ -75,7 +85,7 @@ const StyleHome = StyleSheet.create({
   modelImagePickerBgContainer: {
     backgroundColor: 'white',
     borderRadius: 10,
-    padding: wp('2%'),
+    padding: wp('3%'),
     width: wp('90%'),
   },
   closeModalContainer: {

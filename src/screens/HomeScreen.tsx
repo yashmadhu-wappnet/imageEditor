@@ -5,35 +5,42 @@ import {
   FlatList,
   Image,
   Modal,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import realm from '../database/realme';
 import StyleHome from '../stylesheet/StyleHome';
+const RNFS = require('react-native-fs');
 // create a component
 
-const Array = [
-  {id: 1, project: 'Adding'},
-  {id: 2, project: '1322'},
-];
 const HomeScreen = ({navigation}) => {
   const [projectList, setProjectList] = useState([]);
   const [isProjectModalVisible, setProjectModalVisible] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [isViewExpandable, setViewExpandable] = useState(false);
+  const [isComponentLoad, setComponentLoad] = useState(false);
 
   useEffect(() => {
+    // export const dirPicutures = `${dirHome}/Pictures`;
+    // export const dirAudio = `${dirHome}/Audio`;
+
+    var getdata = realm.objects('ProjectList'); //This realme.objects give us object value.
+    // console.log('Check Data', getdata);
+    setProjectList(getdata);
+
     AsyncStorage.getItem('saveData').then(value => {
-      console.log('AsyncData', value);
+      console.log('AsyncData', JSON.parse(value)); // Here JSON.parse is used to Convert String to Object.
+      const store = value;
+      // console.log('Data ', store);
 
-      // setProjectList(value);
-      // console.log('Array', projectList);
-
-      // if (value != '' || value != null) {
-      // setProjectList(value[0][0]);
+      // if (value != null) {
+      //   setProjectList(JSON.parse(value));
       // }
-      // setProjectList([
+
+      console.log('Project', projectList);
     });
   }, []);
   const showProjectModalVisible = visible => {
@@ -49,12 +56,27 @@ const HomeScreen = ({navigation}) => {
     const temp = [...projectList, tempObj];
 
     setProjectList(temp);
+    console.log('Project temp', temp);
+
     setProjectName('');
-    AsyncStorage.setItem('saveData', JSON.stringify(temp)).then(() => {
-      showExpandableview(false);
-      showProjectModalVisible(false);
-      console.log('ProjectList', projectList);
+
+    // for (let i = 0; i < temp.length; i++) {
+    realm.write(() => {
+      var store = realm.create('ProjectList', {
+        id: projectList.length + 1,
+        project: name,
+        description: '',
+        image: '',
+      });
+      // console.log('Proj', store);
     });
+    // }
+
+    // AsyncStorage.setItem('saveData', JSON.stringify(temp)).then(() => {
+    showExpandableview(false);
+    showProjectModalVisible(false);
+    // console.log('ProjectList', projectList);
+    // });
   };
 
   const showExpandableview = visible => {
@@ -63,37 +85,35 @@ const HomeScreen = ({navigation}) => {
 
   return (
     <View style={StyleHome.container}>
-      {/* <View style={StyleHome.subContainer}>
-          <Image
-            style={StyleHome.folderIconStyle}
-            source={require('../assets/icons/ic_folder.png')}
-          />
-          <Text style={StyleHome.textStyle}>Create Project</Text>
-        </View>
-      </TouchableOpacity>
-      <View style={StyleHome.subContainer}>
-        <Image
-          style={StyleHome.folderIconStyle}
-          source={require('../assets/icons/ic_folder.png')}
-        />
-        <Text style={StyleHome.textStyle}>Open Project</Text>
-      </View> */}
+      <StatusBar backgroundColor={'white'} />
       {projectList.length == 0 ? (
-        <Text>No Project</Text>
+        <View>
+          <Image
+            style={StyleHome.emptyListImageStyle}
+            source={require('../assets/icons/ic_list.png')}
+          />
+          <Text style={StyleHome.emptyListTextStyle}>No Project</Text>
+        </View>
       ) : (
         <View style={StyleHome.projectListContainer}>
           <Text style={StyleHome.titleTextStyle}>Project List</Text>
           <FlatList
             showsVerticalScrollIndicator={false}
             data={projectList}
+            keyExtractor={(item, index) => index.toString()}
             renderItem={({item, index}) => (
               <View style={StyleHome.projectListSubContainer}>
                 <TouchableOpacity
+                  style={StyleHome.subContainer}
                   activeOpacity={0.7}
                   onPress={() =>
                     navigation.navigate('EditImageScreen', {name: item})
                   }>
-                  <Text>{item.project}</Text>
+                  <Text style={{flex: 1}}>{item.project}</Text>
+                  <Image
+                    source={require('../assets/icons/ic_next.png')}
+                    style={StyleHome.nextIconStyle}
+                  />
                 </TouchableOpacity>
               </View>
             )}
@@ -112,12 +132,14 @@ const HomeScreen = ({navigation}) => {
 
       <Modal
         animated
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         onRequestClose={() => showProjectModalVisible(false)}
         // onOrientationChange={'portrait'}
         visible={isProjectModalVisible}>
-        <View style={StyleHome.modelImagePickerContainer}>
+        <TouchableOpacity
+          onPress={() => showProjectModalVisible(false)}
+          style={StyleHome.modelImagePickerContainer}>
           <View style={StyleHome.modelImagePickerBgContainer}>
             <TouchableOpacity
               style={StyleHome.closeModalContainer}
@@ -129,7 +151,7 @@ const HomeScreen = ({navigation}) => {
               />
             </TouchableOpacity>
 
-            {isViewExpandable == false ? (
+            {/* {isViewExpandable == false ? (
               <View>
                 <TouchableOpacity
                   activeOpacity={0.7}
@@ -150,26 +172,26 @@ const HomeScreen = ({navigation}) => {
                   <Text style={StyleHome.textStyle}>Open Project</Text>
                 </View>
               </View>
-            ) : (
-              <View>
-                <View style={StyleHome.editTextContainer}>
-                  <TextInput
-                    value={projectName}
-                    placeholder="Add Project"
-                    numberOfLines={1}
-                    onChangeText={projectName => setProjectName(projectName)}
-                    returnKeyType="done"></TextInput>
-                </View>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => saveProject(projectName)}
-                  style={StyleHome.saveButtonStyle}>
-                  <Text style={StyleHome.saveTextStyle}>Save</Text>
-                </TouchableOpacity>
+            ) : ( */}
+            <View>
+              <View style={StyleHome.editTextContainer}>
+                <TextInput
+                  value={projectName}
+                  placeholder="Create Project"
+                  numberOfLines={1}
+                  onChangeText={projectName => setProjectName(projectName)}
+                  returnKeyType="done"></TextInput>
               </View>
-            )}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => saveProject(projectName)}
+                style={StyleHome.saveButtonStyle}>
+                <Text style={StyleHome.saveTextStyle}>Save</Text>
+              </TouchableOpacity>
+            </View>
+            {/* )} */}
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );

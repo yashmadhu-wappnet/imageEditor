@@ -5,24 +5,28 @@ import {
   Dimensions,
   Image,
   Modal,
-  StyleSheet,
+  ScrollView,
+  StatusBar,
   Text,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from 'react-native';
 import {TextInput} from 'react-native-gesture-handler';
 import ImagePicker from 'react-native-image-picker/lib/commonjs';
-import {
-  heightPercentageToDP as hp,
-  widthPercentageToDP as wp,
-} from 'react-native-responsive-screen';
+import {dirPicutures} from '../database/dirStorage';
+import realm from '../database/realme';
+import StyleEditImage from '../stylesheet/StyleEditImage';
+const RNFS = require('react-native-fs');
+
+// import StyleEditImage from '../StyleEditImageheet/StyleEditImage';
 
 const screenWidth = Dimensions.get('window').width;
 const screenHeight = Dimensions.get('window').height;
 
 // create a component
 const EditImageScreen = ({route, navigation}) => {
-  const [projectName, setprojectName] = useState(false);
+  const [projectName, setprojectName] = useState('');
   const [profileImage, setprofileImage] = useState('');
   const [resourcePath, setResourcePath] = useState('');
   const [tagList, setTagList] = useState([]);
@@ -39,7 +43,18 @@ const EditImageScreen = ({route, navigation}) => {
   console.log('Get Params from one to other Screen', name);
 
   useEffect(() => {
-    setprojectName(name.project);
+    console.log('Check folder', dirPicutures, name.image);
+
+    navigation.addListener('focus', () => {
+      // RNFS.mkdir(dirPicutures);
+
+      setprojectName(name.project);
+      setDescription(name.description);
+      setprofileImage(name.image);
+
+      var data = realm.objects('ProjectList');
+      console.log('Check Imae', data);
+    });
   }, [tagList]);
 
   const setImagePickerModalVisible = () => {
@@ -50,7 +65,6 @@ const EditImageScreen = ({route, navigation}) => {
       },
     };
 
-    console.log('Here');
     ImagePicker.launchCamera(options, response => {
       // console.log('Response = ', response);
 
@@ -60,46 +74,27 @@ const EditImageScreen = ({route, navigation}) => {
         console.log('ImagePicker Error: ', response.error);
       } else if (response.customButton) {
         console.log('User tapped custom button: ', response.customButton);
-        // alert(response.customButton);
       } else {
         // const source = {uri: response.uri};
         console.log('response', JSON.stringify(response));
-        setResourcePath(response.data);
-        setprofileImage(response.uri);
+
+        setResourcePath(response);
+        setprofileImage(response);
+
+        // pickedImage: {
+        //     uri: res.uri,
+        //     data: res.data,
+        //     name: res.fileName,
+        //     type: res.type,
+        //   },
       }
     });
   };
-
-  // const saveProject = (name: string) => {
-  //   var tempObj = {
-  //     id: projectList.length + 1,
-  //     project: name,
-  //   };
-
-  //   const temp = [...projectList, tempObj];
-
-  //   setProjectList(temp);
-  //   setProjectName('');
-  //   AsyncStorage.setItem('saveData', JSON.stringify(temp)).then(() => {
-  //     showExpandableview(false);
-  //     showProjectModalVisible(false);
-  //     console.log('ProjectList', projectList);
-  //   });
-  // };
 
   const tagUser = (message, list, top, left) => {
     console.log('Updated', id, message, top, left);
 
     if (id == null) {
-      // setTagList([
-      //   ...tagList,
-      //   {
-      //     locationX: left,
-      //     locationY: top,
-      //     id: tagList.length + 1,
-      //     addMessage: message,
-      //   },
-      // ]);
       let newView = {
         locationX: left,
         locationY: top,
@@ -141,8 +136,68 @@ const EditImageScreen = ({route, navigation}) => {
     console.log('Post', top, left);
     // if (top != '' && left != '') {
     setEditImageModal(true);
-    // }
-    // setEditImageModal(true);
+  };
+
+  //move the attachment to app folder
+  const moveAttachment = async (filePath, newFilepath, description) => {
+    console.log('Check Path', filePath, newFilepath);
+
+    return new Promise((resolve, reject) => {
+      RNFS.mkdir(dirPicutures)
+        .then(() => {
+          console.log('Check Here');
+          RNFS.moveFile(filePath, newFilepath)
+            .then(() => {
+              console.log('FILE MOVED', filePath, newFilepath);
+              resolve(true);
+
+              var store = realm.objects('ProjectList');
+
+              if (description === '') {
+                ToastAndroid.show(
+                  'Please Enter Description',
+                  ToastAndroid.SHORT,
+                );
+              } else if (resourcePath === '') {
+                ToastAndroid.show('Please Add Image', ToastAndroid.SHORT);
+              } else {
+                realm.write(() => {
+                  let getData = store;
+                  getData.map((item, index) => {
+                    if (item.id === name.id) {
+                      item.description = description;
+                      item.image = newFilepath;
+                    }
+                  });
+                  console.log('Check Entry', getData);
+                });
+              }
+            })
+            .catch(error => {
+              console.log('moveFile error', error);
+              reject(error);
+            });
+        })
+        .catch(err => {
+          console.log('mkdir error', err);
+          reject(err);
+        });
+    });
+  };
+
+  const saveData = async description => {
+    console.log('Get Id', profileImage);
+
+    const newImageName = profileImage.fileName;
+    const newFilepath = `${dirPicutures}/${newImageName}`;
+    const imageMoved = await moveAttachment(
+      profileImage.path,
+      newFilepath,
+      description,
+    );
+    console.log('image moved', imageMoved);
+
+    // var store = realm.objects('ProjectList').filtered(`id = ${.id}`);
   };
 
   const setEditImageModal = visible => {
@@ -153,8 +208,6 @@ const EditImageScreen = ({route, navigation}) => {
     setAddMessage(message);
 
     setEditImageModalVisible(false);
-
-    // console.log('C=Posu', );
 
     tagUser(message, tagList, top, left);
   };
@@ -191,292 +244,178 @@ const EditImageScreen = ({route, navigation}) => {
       position: 'absolute',
       top: setTopData + 150,
       left: setData,
-
       justifyContent: 'center',
     };
   };
 
   return (
-    <View style={styles.container}>
-      {/* <ScrollView
+    <View style={StyleEditImage.container}>
+      <StatusBar backgroundColor={'white'} />
+      <Text style={StyleEditImage.titleTextStyle}>{projectName}</Text>
+      <ScrollView
         showsVerticalScrollIndicator={false}
-        style={styles.scrollContentContainer}> */}
-      <Text style={styles.titleTextStyle}>{projectName}</Text>
-      <View style={styles.addDescriptionContainer}>
-        <TextInput
-          style={styles.addDescriptionTextStyle}
-          value={addDescription}
-          placeholder="Add Description"
-          numberOfLines={5}
-          // maxLength={2}
-          multiline={true}
-          onChangeText={addDescription => setDescription(addDescription)}
-          returnKeyType="done"
-        />
-      </View>
-      {profileImage == null || profileImage == '' ? (
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={styles.addImageContainer}
-          onPress={() => setImagePickerModalVisible()}>
-          <Image
-            style={styles.addIconStyle}
-            source={require('../assets/icons/ic_plus.png')}
-          />
-          <Text style={styles.addTextStyle}>Upload Image</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={event => handlePress(event)}>
-          <Image
-            resizeMode="cover"
-            style={styles.addImageContainer}
-            source={
-              resourcePath == null
-                ? {uri: profileImage}
-                : {
-                    uri: 'data:image/jpeg;base64,' + resourcePath,
-                  }
-            }
-          />
-        </TouchableOpacity>
-      )}
-      {/* <View style={styles.imageContainer}>
+        style={StyleEditImage.scrollContentContainer}>
+        <View style={{alignItems: 'center'}}>
+          {/* <Text style={StyleEditImage.titleTextStyle}>{projectName}</Text> */}
+          <View style={StyleEditImage.addDescriptionContainer}>
+            <TextInput
+              style={StyleEditImage.addDescriptionTextStyle}
+              value={addDescription}
+              placeholder="Add Description"
+              numberOfLines={5}
+              // maxLength={2}
+              multiline={true}
+              onChangeText={addDescription => setDescription(addDescription)}
+              returnKeyType="done"
+            />
+          </View>
+          {profileImage == null || profileImage == '' ? (
+            <View style={StyleEditImage.addImageContainer}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                // style={StyleEditImage.addImageContainer}
+                onPress={() => setImagePickerModalVisible()}>
+                <Image
+                  style={StyleEditImage.addIconStyle}
+                  source={require('../assets/icons/ic_plus.png')}
+                />
+                <Text style={StyleEditImage.addTextStyle}>Upload Image</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={event => handlePress(event)}>
+              <Image
+                resizeMode="cover"
+                style={StyleEditImage.addImageContainer}
+                source={
+                  // {
+                  //   uri: 'file://' + setprofileImage,
+                  // }
+                  resourcePath === null
+                    ? {
+                        uri: 'file://' + name.image,
+                      }
+                    : {
+                        uri: 'data:image/jpeg;base64,' + resourcePath.data,
+                      }
+                }
+              />
+            </TouchableOpacity>
+          )}
+          {/* <View style={StyleEditImage.imageContainer}>
         <TouchableWithoutFeedback onPress={event => handlePress(event)}>
           <Image
-            style={styles.imageStyle}
+            style={StyleEditImage.imageStyle}
             source={require('../assets/icons/ic_plus.png')}
           />
         </TouchableWithoutFeedback>
       </View> */}
-      {tagList.map(
-        list => (
-          console.log('list', list.addMessage),
-          (
-            <View key={list.id} style={dynamicStyle(list)}>
-              <View style={styles.tagTriangle}></View>
-              <View style={styles.tagUserView}>
-                <Text style={styles.tagListText}> {list.addMessage} </Text>
+          {tagList.map(
+            list => (
+              console.log('list', list.addMessage),
+              (
+                <View key={list.id} style={dynamicStyle(list)}>
+                  <View style={StyleEditImage.tagTriangle}></View>
+                  <View style={StyleEditImage.tagUserView}>
+                    <Text style={StyleEditImage.tagListText}>
+                      {list.addMessage}
+                    </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      key={list.id}
+                      style={StyleEditImage.removeTagUser}
+                      onPress={() => {
+                        editUser(list);
+                      }}>
+                      <Image
+                        style={StyleEditImage.removeIcon}
+                        source={require('../assets/icons/ic_edit.png')}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      key={list.id}
+                      style={StyleEditImage.removeTagUser}
+                      onPress={() => {
+                        removeUser(list);
+                      }}>
+                      <Image
+                        style={StyleEditImage.removeIcon}
+                        source={require('../assets/icons/ic_remove.png')}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )
+            ),
+          )}
+          <Modal
+            animated
+            animationType="fade"
+            transparent={true}
+            onRequestClose={() => setEditImageModal(false)}
+            // onOrientationChange={'portrait'}
+            visible={isEditImageModalVisible}>
+            <View style={StyleEditImage.modelImagePickerContainer}>
+              <View style={StyleEditImage.modelImagePickerBgContainer}>
                 <TouchableOpacity
+                  style={StyleEditImage.closeModalContainer}
                   activeOpacity={0.7}
-                  key={list.id}
-                  style={styles.removeTagUser}
-                  onPress={() => {
-                    editUser(list);
-                  }}>
+                  onPress={() => setEditImageModalVisible(false)}>
                   <Image
-                    style={styles.removeIcon}
-                    source={require('../assets/icons/ic_edit.png')}
+                    style={StyleEditImage.removeIcon}
+                    source={require('../assets/icons/ic_close.png')}
                   />
                 </TouchableOpacity>
+                <View style={StyleEditImage.editTextContainer}>
+                  <TextInput
+                    value={addMessage}
+                    placeholder="Add Message"
+                    numberOfLines={1}
+                    onChangeText={addMessage => setAddMessage(addMessage)}
+                    returnKeyType="done"></TextInput>
+                </View>
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  key={list.id}
-                  style={styles.removeTagUser}
                   onPress={() => {
-                    removeUser(list);
-                  }}>
-                  <Image
-                    style={styles.removeIcon}
-                    source={require('../assets/icons/ic_remove.png')}
-                  />
+                    saveMessage(addMessage);
+                  }}
+                  style={StyleEditImage.saveButtonStyle}>
+                  <Text style={StyleEditImage.saveTextStyle}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>
-          )
-        ),
-      )}
-      <Modal
-        animated
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setEditImageModal(false)}
-        // onOrientationChange={'portrait'}
-        visible={isEditImageModalVisible}>
-        <View style={styles.modelImagePickerContainer}>
-          <View style={styles.modelImagePickerBgContainer}>
-            <TouchableOpacity
-              style={styles.closeModalContainer}
-              activeOpacity={0.7}
-              onPress={() => setEditImageModalVisible(false)}>
-              <Image
-                style={styles.removeIcon}
-                source={require('../assets/icons/ic_close.png')}
-              />
-            </TouchableOpacity>
-            <View style={styles.editTextContainer}>
-              <TextInput
-                value={addMessage}
-                placeholder="Add Message"
-                numberOfLines={1}
-                onChangeText={addMessage => setAddMessage(addMessage)}
-                returnKeyType="done"></TextInput>
-            </View>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => {
-                saveMessage(addMessage);
-              }}
-              style={styles.saveButtonStyle}>
-              <Text style={styles.saveTextStyle}>Save</Text>
-            </TouchableOpacity>
-          </View>
+          </Modal>
         </View>
-      </Modal>
-      {/* </ScrollView> */}
+      </ScrollView>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => {
+          saveData(addDescription);
+        }}
+        style={StyleEditImage.saveDataContainer}>
+        <Text style={StyleEditImage.saveTextStyle}>Save</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
-// define your styles
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    // paddingHorizontal: wp('5%'),
-    backgroundColor: 'white',
-  },
-  scrollContentContainer: {
-    zIndex: 1,
-    // backgroundColor: 'aqua',
-    width: wp('100%'),
-    height: hp('100%'),
-  },
-  titleTextStyle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: hp('2%'),
-  },
-  addDescriptionContainer: {
-    borderWidth: wp('0.2%'),
-    // backgroundColor: 'aqua',
-    borderRadius: 5,
-    width: wp('90%'),
-    height: hp('15%'),
-    //  margin:
-    borderBottomColor: '#929292',
-  },
-  addDescriptionTextStyle: {
-    textAlignVertical: 'top',
-  },
-  imageContainer: {
-    height: screenHeight / 2,
-    position: 'absolute',
-  },
-  imageStyle: {
-    width: screenWidth,
-    height: screenHeight / 2,
-  },
-  tagTriangle: {
-    height: 0,
-    width: 0,
-    left: 15,
-    borderLeftColor: 'transparent',
-    borderLeftWidth: 7,
-    borderRightColor: 'transparent',
-    borderRightWidth: 7,
-    borderBottomColor: 'rgba(0,0,0,.30)',
-    borderBottomWidth: 7,
-  },
-  tagUserView: {
-    backgroundColor: 'rgba(0,0,0,.30)',
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,.30)',
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingTop: 3,
-    paddingBottom: 3,
-    flexDirection: 'row',
-  },
-  tagListText: {
-    color: 'white',
-    fontWeight: '800',
-  },
-  removeTagUser: {
-    backgroundColor: 'white',
-    height: wp('5%'),
-    width: wp('5%'),
-    marginLeft: 5,
-    borderRadius: 15,
-  },
-  closeModalContainer: {
-    backgroundColor: 'white',
-    height: wp('7%'),
-    width: wp('7%'),
-    marginLeft: 5,
-    borderRadius: 15,
-    alignSelf: 'flex-end',
-  },
-  removeIcon: {
-    height: wp('5%'),
-    width: wp('5%'),
-  },
-  closeIconStyle: {
-    width: 20,
-    height: 20,
-    marginTop: 10,
-    marginRight: 10,
-  },
-
-  addImageContainer: {
-    borderRadius: 10,
-    height: hp('75%'),
-    marginVertical: hp('2%'),
-    // flex:1,,
-    width: wp('90%'),
-    // flex: 1,
-    borderWidth: wp('0.2%'),
-    backgroundColor: 'aqua',
-    borderColor: '#929292',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addIconStyle: {
-    width: wp('8%'),
-    height: wp('8%'),
-    alignSelf: 'center',
-  },
-  addTextStyle: {
-    textAlign: 'center',
-    // ali,
-  },
-
-  modelImagePickerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-
-  modelImagePickerBgContainer: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: wp('2%'),
-    width: wp('90%'),
-  },
-  saveButtonStyle: {
-    backgroundColor: '#19c0e4',
-    borderRadius: 10,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: hp('3%'),
-  },
-  saveTextStyle: {
-    textAlign: 'center',
-    color: 'white',
-  },
-  editTextContainer: {
-    borderBottomColor: '#929292',
-    borderBottomWidth: wp('0.2%'),
-    // backgroundColor: 'aqua',
-  },
-});
+// define your StyleEditImage
 
 //make this component available to the app
 export default EditImageScreen;
+
+// This is Example of realm Database
+// const saveData = () => {
+//   for (let i = 0; i < 3; i++) {
+//     realm.write(() => {
+//       const book = realm.create('Book', {
+//         title: 'Barry Butter' + i,
+//         pages: 400,
+//       });
+//     });
+//     console.log('Check Entry', book);
+//   }
+// };

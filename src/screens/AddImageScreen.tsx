@@ -3,6 +3,7 @@ import React, {useState} from 'react';
 import {
   Image,
   Modal,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
@@ -74,23 +75,19 @@ const AddImageScreen = ({navigation}) => {
 
   return (
     <View style={StyleAddImage.container}>
+      <StatusBar backgroundColor={'white'} />
       {profileImage == null || profileImage == '' ? (
         <TouchableOpacity
           activeOpacity={0.7}
           style={StyleAddImage.addImageContainer}
           onPress={() => setImagePickerModalVisible()}>
           <Image
-            style={StyleAddImage.addIconStyle}
-            source={
-              require('../assets/icons/ic_plus.png')
-              // profileImage == null || profileImage == ''
-              //   ? require('../assets/icons/ic_plus.png')
-              //   : resourcePath == null
-              //   ? {uri: profileImage}
-              //   : {
-              //       uri: 'data:image/jpeg;base64,' + resourcePath,
-              //     }
-            }
+            // resizeMode="cover"
+            style={StyleAddImage.addImageContainer}
+            source={{uri: 'https://picsum.photos/200'}}
+            // source={{
+            //   uri: 'file:///storage/emulated/0/Android/ImageEditor/Projects/images/test.jpg',
+            // }}
           />
           <Text style={StyleAddImage.addTextStyle}>Upload Image</Text>
         </TouchableOpacity>

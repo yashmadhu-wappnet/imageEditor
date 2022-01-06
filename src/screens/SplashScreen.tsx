@@ -1,6 +1,6 @@
 //import liraries
 import React, {useEffect} from 'react';
-import {ImageBackground, StyleSheet, Text, View} from 'react-native';
+import {ImageBackground, StatusBar, StyleSheet, Text, View} from 'react-native';
 import {widthPercentageToDP as wp} from 'react-native-responsive-screen';
 
 // const goToLoginPage = () => navigate('/login');
@@ -19,12 +19,13 @@ const SplashScreen = ({navigation}) => {
   // };
   return (
     <View style={styles.container}>
+      <StatusBar backgroundColor={'white'} />
       <ImageBackground
         style={styles.imageContainer}
         // resizeMode="contain"
         source={require('../assets/images/ic_logo.png')}
       />
-      <Text>Welcome</Text>
+      <Text>Image Editor</Text>
     </View>
   );
 };
