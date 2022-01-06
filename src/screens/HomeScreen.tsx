@@ -26,7 +26,7 @@ const HomeScreen = ({navigation}) => {
   useEffect(() => {
     // export const dirPicutures = `${dirHome}/Pictures`;
     // export const dirAudio = `${dirHome}/Audio`;
-
+    // navigation.addListener()
     var getdata = realm.objects('ProjectList'); //This realme.objects give us object value.
     // console.log('Check Data', getdata);
     setProjectList(getdata);
