@@ -1,9 +1,10 @@
 //import liraries
-import _ from 'lodash';
 import React, {useEffect, useState} from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
+  Keyboard,
   Modal,
   ScrollView,
   StatusBar,
@@ -18,7 +19,6 @@ import {dirPicutures} from '../database/dirStorage';
 import realm from '../database/realme';
 import StyleEditImage from '../stylesheet/StyleEditImage';
 const RNFS = require('react-native-fs');
-
 // import StyleEditImage from '../StyleEditImageheet/StyleEditImage';
 
 const screenWidth = Dimensions.get('window').width;
@@ -27,8 +27,8 @@ const screenHeight = Dimensions.get('window').height;
 // create a component
 const EditImageScreen = ({route, navigation}) => {
   const [projectName, setprojectName] = useState('');
-  const [profileImage, setprofileImage] = useState('');
-  const [resourcePath, setResourcePath] = useState('');
+  const [profileImage, setprofileImage] = useState(null);
+  const [resourcePath, setResourcePath] = useState(null);
   const [tagList, setTagList] = useState([]);
   const [userList, setUserList] = useState([]);
   const [top, setTop] = useState('');
@@ -37,25 +37,68 @@ const EditImageScreen = ({route, navigation}) => {
   const [isEditImageModalVisible, setEditImageModalVisible] = useState(false);
   const [id, setId] = useState(null);
   const [addDescription, setDescription] = useState('');
+  const [incrementId, setIncrementId] = useState(0);
+  const [isLoading, setLoading] = useState(false);
+  const [isImageUpload, setImageUpload] = useState(false);
 
   const {name} = route.params;
 
   console.log('Get Params from one to other Screen', name);
 
   useEffect(() => {
-    console.log('Check folder', dirPicutures, name.image);
-
     navigation.addListener('focus', () => {
-      // RNFS.mkdir(dirPicutures);
+      console.log('First ', typeof tagList);
+
+      var checkData = realm.objects('ImageList');
+      console.log('ImageList', checkData);
+
+      var storeDes = checkData.find((item, index) => {
+        if (item.projectId == name.id) {
+          return item;
+        }
+      });
+      console.log('CSSSS', storeDes);
+
+      if (storeDes != undefined) {
+        setprofileImage(storeDes.image);
+        setDescription(storeDes.description);
+
+        var saveTagList = realm.objects('TagList');
+
+        console.log('Tagt', saveTagList);
+
+        var showTagList = realm
+          .objects('TagList')
+          .filtered(`imageId="${storeDes.imageId}"`);
+
+        console.log('TAGGGG', typeof showTagList);
+        setTagList(showTagList);
+        // setImageUpload(storeDes.image);
+      }
 
       setprojectName(name.project);
-      setDescription(name.description);
-      setprofileImage(name.image);
 
-      var data = realm.objects('ProjectList');
-      console.log('Check Imae', data);
+      var saveTagList = realm.objects('TagList');
+
+      var get = saveTagList.map((item, index) => {
+        return item.tagId;
+      });
+      console.log('Max', get);
+
+      var getId = Math.max(...get);
+      console.log('Max Id', getId, incrementId, tagList.length);
+
+      setIncrementId(getId);
+      // setprofileImage(name.image);
     });
   }, [tagList]);
+
+  useEffect(() => {
+    // removeUser;
+  }, [profileImage]);
+  const setLoaderState = loaderState => {
+    setLoading(loaderState);
+  };
 
   const setImagePickerModalVisible = () => {
     const options = {
@@ -76,7 +119,7 @@ const EditImageScreen = ({route, navigation}) => {
         console.log('User tapped custom button: ', response.customButton);
       } else {
         // const source = {uri: response.uri};
-        console.log('response', JSON.stringify(response));
+        console.log('response', JSON.stringify(response.uri));
 
         setResourcePath(response);
         setprofileImage(response);
@@ -98,35 +141,44 @@ const EditImageScreen = ({route, navigation}) => {
       let newView = {
         locationX: left,
         locationY: top,
-        id: tagList.length + 1,
+        tagId: tagList.length + 1,
         addMessage: message,
       };
       setTagList(tagList.concat([newView]));
-    } else {
-      var tempList = list;
-      console.log('Check Id', id);
 
+      addTagList(message, top, left);
+
+      // var getTagList = realm.objects('TagList');
+
+      // for (let i = 0; i < getTagList.length; i++) {
+      //   if (getTagList[i].tagId == incrementId) {
+      //     getTagList.tagId = i + 1;
+      //   }
+      //   console.log('Final', getTagList);
+      // }
+      // realm.write(() => {
+      //   var store = realm.create('TagList', {
+      //     tagId: getTagList.length + 1,
+      //     imageId: name.id,
+      //     locationX: left,
+      //     locationY: top,
+      //     addMessage: message,
+      //   });
+      // });
+    } else {
+      // console.log('ERRRRRR');
+
+      editTagList(message, top, left);
+      var tempList = list;
       for (let i = 0; i < tempList.length; i++) {
-        if (tempList[i].id == id) {
+        if (tempList[i].tagId == id) {
           tempList[i].addMessage = message;
-          console.log('Here', tempList[i]);
+          // console.log('Here', tempList[i]);
           setId(null);
         }
       }
-      console.log('Updates', tempList);
     }
-
-    // let newView = {
-    //   locationX: left,
-    //   locationY: top,
-    //   id: tagList.length + 1,
-    //   addMessage: message,
-    // };
-
-    // setTagList(tagList.concat([newView]));
-
     setAddMessage('');
-    // setId(null);
   };
 
   const handlePress = evt => {
@@ -145,33 +197,22 @@ const EditImageScreen = ({route, navigation}) => {
     return new Promise((resolve, reject) => {
       RNFS.mkdir(dirPicutures)
         .then(() => {
-          console.log('Check Here');
           RNFS.moveFile(filePath, newFilepath)
             .then(() => {
+              setLoaderState(true);
+
               console.log('FILE MOVED', filePath, newFilepath);
               resolve(true);
 
-              var store = realm.objects('ProjectList');
-
-              if (description === '') {
-                ToastAndroid.show(
-                  'Please Enter Description',
-                  ToastAndroid.SHORT,
-                );
-              } else if (resourcePath === '') {
-                ToastAndroid.show('Please Add Image', ToastAndroid.SHORT);
-              } else {
-                realm.write(() => {
-                  let getData = store;
-                  getData.map((item, index) => {
-                    if (item.id === name.id) {
-                      item.description = description;
-                      item.image = newFilepath;
-                    }
-                  });
-                  console.log('Check Entry', getData);
+              realm.write(() => {
+                var imageTable = realm.create('ImageList', {
+                  imageId: name.id,
+                  projectId: name.id,
+                  description: description,
+                  image: newFilepath,
                 });
-              }
+                console.log('Check DATA', imageTable);
+              });
             })
             .catch(error => {
               console.log('moveFile error', error);
@@ -188,16 +229,53 @@ const EditImageScreen = ({route, navigation}) => {
   const saveData = async description => {
     console.log('Get Id', profileImage);
 
-    const newImageName = profileImage.fileName;
-    const newFilepath = `${dirPicutures}/${newImageName}`;
-    const imageMoved = await moveAttachment(
-      profileImage.path,
-      newFilepath,
-      description,
-    );
-    console.log('image moved', imageMoved);
+    if (description === '') {
+      ToastAndroid.show('Please Enter Description', ToastAndroid.SHORT);
+    } else if (profileImage == '' || profileImage == null) {
+      ToastAndroid.show('Please Add Image', ToastAndroid.SHORT);
+    } else {
+      const newImageName = profileImage.fileName;
+      const newFilepath = `${dirPicutures}/${newImageName}`;
+      const imageMoved = await moveAttachment(
+        profileImage.path,
+        newFilepath,
+        description,
+      );
+      console.log('image moved', imageMoved);
+    }
+  };
 
-    // var store = realm.objects('ProjectList').filtered(`id = ${.id}`);
+  const addTagList = (message, top, left) => {
+    var getTagList = realm.objects('TagList');
+
+    for (let i = 0; i < getTagList.length; i++) {
+      if (getTagList[i].tagId == incrementId) {
+        getTagList.tagId = i + 1;
+      }
+    }
+
+    realm.write(() => {
+      var store = realm.create('TagList', {
+        tagId: getTagList.length + 1,
+        imageId: name.id,
+        locationX: left,
+        locationY: top,
+        addMessage: message,
+      });
+    });
+  };
+
+  const editTagList = (message, top, left) => {
+    var getTagList = realm.objects('TagList');
+
+    // console.log('Final', getTagList);
+    realm.write(() => {
+      getTagList.map((item, index) => {
+        if (item.tagId == id) {
+          item.addMessage = message;
+        }
+      });
+    });
   };
 
   const setEditImageModal = visible => {
@@ -205,40 +283,65 @@ const EditImageScreen = ({route, navigation}) => {
   };
 
   const saveMessage = message => {
+    Keyboard.dismiss();
+
     setAddMessage(message);
-
     setEditImageModalVisible(false);
-
     tagUser(message, tagList, top, left);
   };
 
   const editUser = editdata => {
-    setAddMessage(editdata.addMessage);
-    setId(editdata.id);
+    console.log('CEEE', editdata);
 
+    setAddMessage(editdata.addMessage);
+
+    // if(id ==)
+    setId(editdata.tagId);
+
+    // setId()
     setEditImageModal(true);
   };
 
-  const removeUser = user => {
-    console.log('Userdata', user);
+  const removeUser = (user, index) => {
+    console.log('Before', index, typeof tagList, tagList);
 
-    let tempUser = tagList;
-    let index = _.findIndex(tempUser, function (o) {
-      return o.id == user.id;
+    // delete tagList[tagList[index]];
+
+    // let store = JSON.stringify(tagList);
+    // var store1 = JSON.parse(store);
+    // // const checkdata = store.splice(index, 1);
+    // console.log('After', store1, tagList);
+
+    // var store = JSON.parse(tagList);
+    setTagList(tagList);
+    // user.splice(index, 1);
+    removeTagListFromDatabase(user.tagId);
+
+    // setTagList([...tempUser]);
+  };
+
+  const removeTagListFromDatabase = deleteId => {
+    var getTagList = realm.objects('TagList');
+    console.log('Final', getTagList, deleteId);
+
+    var deleteList = getTagList.filter((item, index) => {
+      // console.log('ITEM', item, index);
+      if (item.tagId === deleteId) return item;
     });
-    tempUser.splice(index, 1);
-    setTagList([...tempUser]);
-    // console.log('After', tempUser, tagList);
-    // this.setState({tagList: tempUser});
+    console.log('DEEEE', deleteList);
+
+    realm.write(() => {
+      realm.delete(deleteList);
+    });
   };
 
   const dynamicStyle = data => {
-    console.log('Data', data);
+    // console.log('Data', data);
 
     let setData = (screenWidth * data.locationX) / 100;
     let setTopData = (screenHeight * data.locationY) / 100;
 
-    console.log('Show Posi', top, left, tagList);
+    // console.log('Show Posi', top, left, tagList);
 
     return {
       position: 'absolute',
@@ -266,7 +369,7 @@ const EditImageScreen = ({route, navigation}) => {
               // maxLength={2}
               multiline={true}
               onChangeText={addDescription => setDescription(addDescription)}
-              returnKeyType="done"
+              returnKeyType="none"
             />
           </View>
           {profileImage == null || profileImage == '' ? (
@@ -287,16 +390,17 @@ const EditImageScreen = ({route, navigation}) => {
               activeOpacity={0.9}
               onPress={event => handlePress(event)}>
               <Image
-                resizeMode="cover"
+                // resizeMode="contain"
                 style={StyleEditImage.addImageContainer}
                 source={
-                  // {
-                  //   uri: 'file://' + setprofileImage,
+                  //  This is set for image // {
+                  //   uri:
+                  //     name.image != ''
+                  //       ? 'file://' + name.image
+                  //       : 'file://' + profileImage.path,
                   // }
                   resourcePath === null
-                    ? {
-                        uri: 'file://' + name.image,
-                      }
+                    ? {uri: 'file://' + profileImage}
                     : {
                         uri: 'data:image/jpeg;base64,' + resourcePath.data,
                       }
@@ -313,7 +417,7 @@ const EditImageScreen = ({route, navigation}) => {
         </TouchableWithoutFeedback>
       </View> */}
           {tagList.map(
-            list => (
+            (list, index) => (
               console.log('list', list.addMessage),
               (
                 <View key={list.id} style={dynamicStyle(list)}>
@@ -339,7 +443,7 @@ const EditImageScreen = ({route, navigation}) => {
                       key={list.id}
                       style={StyleEditImage.removeTagUser}
                       onPress={() => {
-                        removeUser(list);
+                        removeUser(list, index);
                       }}>
                       <Image
                         style={StyleEditImage.removeIcon}
@@ -358,7 +462,9 @@ const EditImageScreen = ({route, navigation}) => {
             onRequestClose={() => setEditImageModal(false)}
             // onOrientationChange={'portrait'}
             visible={isEditImageModalVisible}>
-            <View style={StyleEditImage.modelImagePickerContainer}>
+            <TouchableOpacity
+              style={StyleEditImage.modelImagePickerContainer}
+              onPress={() => setEditImageModal(false)}>
               <View style={StyleEditImage.modelImagePickerBgContainer}>
                 <TouchableOpacity
                   style={StyleEditImage.closeModalContainer}
@@ -386,7 +492,7 @@ const EditImageScreen = ({route, navigation}) => {
                   <Text style={StyleEditImage.saveTextStyle}>Save</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           </Modal>
         </View>
       </ScrollView>
@@ -398,6 +504,13 @@ const EditImageScreen = ({route, navigation}) => {
         style={StyleEditImage.saveDataContainer}>
         <Text style={StyleEditImage.saveTextStyle}>Save</Text>
       </TouchableOpacity>
+      {/* {isLoading && ( */}
+      <ActivityIndicator
+        size="large"
+        color={'#00ff00'}
+        style={StyleEditImage.loaderStyle}
+      />
+      {/* )} */}
     </View>
   );
 };

@@ -21,26 +21,20 @@ const HomeScreen = ({navigation}) => {
   const [isProjectModalVisible, setProjectModalVisible] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [isViewExpandable, setViewExpandable] = useState(false);
-  const [isComponentLoad, setComponentLoad] = useState(false);
 
   useEffect(() => {
     // export const dirPicutures = `${dirHome}/Pictures`;
     // export const dirAudio = `${dirHome}/Audio`;
-    // navigation.addListener()
-    var getdata = realm.objects('ProjectList'); //This realme.objects give us object value.
-    // console.log('Check Data', getdata);
-    setProjectList(getdata);
+    navigation.addListener('focus', () => {
+      var getdata = realm.objects('ProjectList'); //This realme.objects give us object value.
+      console.log('ProjectList ', getdata);
 
-    AsyncStorage.getItem('saveData').then(value => {
-      console.log('AsyncData', JSON.parse(value)); // Here JSON.parse is used to Convert String to Object.
-      const store = value;
-      // console.log('Data ', store);
+      setProjectList(getdata);
 
-      // if (value != null) {
-      //   setProjectList(JSON.parse(value));
-      // }
-
-      console.log('Project', projectList);
+      AsyncStorage.getItem('saveData').then(value => {
+        console.log('AsyncData', JSON.parse(value)); // Here JSON.parse is used to Convert String to Object.
+        // console.log('Data ', store
+      });
     });
   }, []);
   const showProjectModalVisible = visible => {
@@ -55,7 +49,7 @@ const HomeScreen = ({navigation}) => {
 
     const temp = [...projectList, tempObj];
 
-    setProjectList(temp);
+    // setProjectList(temp);
     console.log('Project temp', temp);
 
     setProjectName('');
@@ -65,10 +59,7 @@ const HomeScreen = ({navigation}) => {
       var store = realm.create('ProjectList', {
         id: projectList.length + 1,
         project: name,
-        description: '',
-        image: '',
       });
-      // console.log('Proj', store);
     });
     // }
 

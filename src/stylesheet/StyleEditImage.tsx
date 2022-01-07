@@ -124,16 +124,17 @@ const StyleEditImage = StyleSheet.create({
 
   modelImagePickerContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
 
   modelImagePickerBgContainer: {
     backgroundColor: 'white',
-    borderRadius: 10,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: wp('2%'),
-    width: wp('90%'),
+    width: wp('100%'),
   },
   saveButtonStyle: {
     backgroundColor: '#19c0e4',
@@ -161,6 +162,13 @@ const StyleEditImage = StyleSheet.create({
     borderBottomColor: '#929292',
     borderBottomWidth: wp('0.2%'),
     // backgroundColor: 'aqua',
+  },
+  loaderStyle: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
 });
 

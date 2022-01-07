@@ -77,16 +77,17 @@ const StyleHome = StyleSheet.create({
   },
   modelImagePickerContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
 
   modelImagePickerBgContainer: {
     backgroundColor: 'white',
-    borderRadius: 10,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: wp('3%'),
-    width: wp('90%'),
+    width: wp('100%'),
   },
   closeModalContainer: {
     backgroundColor: 'white',

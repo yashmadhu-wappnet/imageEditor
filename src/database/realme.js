@@ -17,23 +17,35 @@ ProjectListSchema.schema = {
   properties: {
     id: 'int',
     project: 'string',
+  },
+};
+
+class ImageListSchema extends Realm.Object {}
+ImageListSchema.schema = {
+  name: 'ImageList',
+  properties: {
+    imageId: 'int',
+    projectId: 'int',
     description: 'string',
     image: 'string',
   },
 };
 
-// class SaveUserDataSchema extends Realm.Object {}
-// SaveUserDataSchema.schema = {
-//   name: 'SaveData',
-//   properties: {
-//     image: '',
-//     project: 'string',
-//   },
-// };
+class SaveTagListSchema extends Realm.Object {}
+SaveTagListSchema.schema = {
+  name: 'TagList',
+  properties: {
+    tagId: 'int',
+    imageId: 'int',
+    locationX: 'float',
+    locationY: 'float',
+    addMessage: 'string',
+  },
+};
 
 // Create realm
 let realm = new Realm({
-  schema: [BookSchema, ProjectListSchema],
+  schema: [BookSchema, ProjectListSchema, ImageListSchema, SaveTagListSchema],
   schemaVersion: 1,
 });
 
